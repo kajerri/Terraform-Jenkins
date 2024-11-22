@@ -2,53 +2,48 @@ pipeline {
     agent any
 
     environment {
-        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID') // Jenkins credential ID for Access Key
-        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY') // Jenkins credential ID for Secret Key
+        // Replace 'AWS_ACCESS_KEY_ID' and 'AWS_SECRET_ACCESS_KEY' with your Jenkins credentials' IDs
+        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
     }
 
     stages {
         stage('Checkout Code') {
             steps {
-                echo 'Checking out code...'
-                checkout scm
+                // Cloning the GitHub repository containing the Terraform code
+                git branch: 'main', url: 'https://github.com/kajerri/Terraform-Jenkins.git'
             }
         }
 
-        stage('Initialize Terraform') {
+        stage('Terraform Init') {
             steps {
-                echo 'Initializing Terraform...'
-                sh 'terraform init'
+                sh '''
+                terraform init
+                '''
             }
         }
 
-        stage('Validate Terraform') {
+        stage('Terraform Plan') {
             steps {
-                echo 'Validating Terraform configuration...'
-                sh 'terraform validate'
+                sh '''
+                terraform plan -out=tfplan
+                '''
             }
         }
 
-        stage('Plan Terraform') {
+        stage('Terraform Apply') {
             steps {
-                echo 'Creating Terraform execution plan...'
-                sh 'terraform plan -out=tfplan'
-            }
-        }
-
-        stage('Apply Terraform') {
-            steps {
-                echo 'Applying Terraform configuration...'
-                sh 'terraform apply -auto-approve tfplan'
+                sh '''
+                terraform apply -auto-approve tfplan
+                '''
             }
         }
     }
 
     post {
-        success {
-            echo 'Terraform apply completed successfully!'
-        }
-        failure {
-            echo 'Terraform apply failed!'
+        always {
+            // Clean up the workspace to ensure no sensitive information persists
+            cleanWs()
         }
     }
 }
