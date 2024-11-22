@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/your-repo/terraform-module.git' // Replace with your repo URL
+                git branch: 'main', url: 'https://github.com/kajerri/Terraform-Jenkins.git' // Replace with your repo URL
             }
         }
         
