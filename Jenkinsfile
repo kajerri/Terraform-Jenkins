@@ -1,54 +1,54 @@
 pipeline {
+    agent any
 
-    parameters {
-        booleanParam(name: 'autoApprove', defaultValue: false, description: 'Automatically run apply after generating plan?')
-    } 
     environment {
-        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        AWS_ACCESS_KEY_ID = credentials('aws-access-key') // Jenkins credential ID for Access Key
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key') // Jenkins credential ID for Secret Key
     }
 
-   agent  any
     stages {
-        stage('checkout') {
+        stage('Checkout Code') {
             steps {
-                 script{
-                        dir("terraform")
-                        {
-                            git "https://github.com/kajerri/Terraform-Jenkins.git"
-                        }
-                    }
-                }
-            }
-
-        stage('Plan') {
-            steps {
-                sh 'pwd;cd terraform/ ; terraform init'
-                sh "pwd;cd terraform/ ; terraform plan -out tfplan"
-                sh 'pwd;cd terraform/ ; terraform show -no-color tfplan > tfplan.txt'
+                echo 'Checking out code...'
+                checkout scm
             }
         }
-        stage('Approval') {
-           when {
-               not {
-                   equals expected: true, actual: params.autoApprove
-               }
-           }
 
-           steps {
-               script {
-                    def plan = readFile 'terraform/tfplan.txt'
-                    input message: "Do you want to apply the plan?",
-                    parameters: [text(name: 'Plan', description: 'Please review the plan', defaultValue: plan)]
-               }
-           }
-       }
-
-        stage('Apply') {
+        stage('Initialize Terraform') {
             steps {
-                sh "pwd;cd terraform/ ; terraform apply -input=false tfplan"
+                echo 'Initializing Terraform...'
+                sh 'terraform init'
+            }
+        }
+
+        stage('Validate Terraform') {
+            steps {
+                echo 'Validating Terraform configuration...'
+                sh 'terraform validate'
+            }
+        }
+
+        stage('Plan Terraform') {
+            steps {
+                echo 'Creating Terraform execution plan...'
+                sh 'terraform plan -out=tfplan'
+            }
+        }
+
+        stage('Apply Terraform') {
+            steps {
+                echo 'Applying Terraform configuration...'
+                sh 'terraform apply -auto-approve tfplan'
             }
         }
     }
 
-  }
+    post {
+        success {
+            echo 'Terraform apply completed successfully!'
+        }
+        failure {
+            echo 'Terraform apply failed!'
+        }
+    }
+}
