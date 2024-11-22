@@ -1,49 +1,28 @@
 pipeline {
     agent any
-
-    environment {
-        // Replace 'AWS_ACCESS_KEY_ID' and 'AWS_SECRET_ACCESS_KEY' with your Jenkins credentials' IDs
-        AWS_ACCESS_KEY_ID = credentials('AWS_ACCESS_KEY_ID')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
-    }
-
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
-                // Cloning the GitHub repository containing the Terraform code
-                git branch: 'main', url: 'https://github.com/kajerri/Terraform-Jenkins.git'
+                git branch: 'main', url: 'https://github.com/your-repo/terraform-module.git' // Replace with your repo URL
             }
         }
-
-        stage('Terraform Init') {
+        
+        stage('Initialize Terraform') {
             steps {
-                sh '''
-                terraform init
-                '''
+                sh 'terraform init'
             }
         }
-
-        stage('Terraform Plan') {
+        
+        stage('Plan Terraform') {
             steps {
-                sh '''
-                terraform plan -out=tfplan
-                '''
+                sh 'terraform plan -var "aws_access_key=${env.AWS_ACCESS_KEY}" -var "aws_secret_key=${env.AWS_SECRET_KEY}"' 
             }
         }
-
-        stage('Terraform Apply') {
+        
+        stage('Apply Terraform') {
             steps {
-                sh '''
-                terraform apply -auto-approve tfplan
-                '''
+                sh 'terraform apply -var "aws_access_key=${env.AWS_ACCESS_KEY}" -var "aws_secret_key=${env.AWS_SECRET_KEY}"'
             }
-        }
-    }
-
-    post {
-        always {
-            // Clean up the workspace to ensure no sensitive information persists
-            cleanWs()
         }
     }
 }
