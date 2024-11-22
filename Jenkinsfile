@@ -1,34 +1,28 @@
+properties([ parameters([
+  string( name: 'AWS_ACCESS_KEY_ID', defaultValue: ''),
+  string( name: 'AWS_SECRET_ACCESS_KEY', defaultValue: ''),
+  string( name: 'AWS_REGION', defaultValue: 'us-east-1'),
+]), pipelineTriggers([]) ])
+// Environment Variables.
+env.access_key = AWS_ACCESS_KEY_ID
+env.secret_key = AWS_SECRET_ACCESS_KEY
+env.region = AWS_REGION
 pipeline {
-    parameters {
-        booleanParam(name: 'autoApprove', defaultValue: false, description: 'Automatically run apply after generating plan?')
-    } 
-    environment {
-        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
-        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
-    }
     agent any
     stages {
-        stage('Checkout') {
+        stage ('Terraform Init'){
             steps {
-                git branch: 'main', url: 'https://github.com/kajerri/Terraform-Jenkins.git' // Replace with your repo URL
+                sh "export TF_VAR_region='${env.aws_region}' && export TF_VAR_access_key='${env.access_key}' && export TF_VAR_secret_key='${env.secret_key}' && terraform init"
             }
         }
-        
-        stage('Initialize Terraform') {
+        stage ('Terraform Plan'){
             steps {
-                sh 'terraform init'
+                sh "export TF_VAR_region='${env.aws_region}' && export TF_VAR_access_key='${env.access_key}' && export TF_VAR_secret_key='${env.secret_key}' && terraform plan -var-file terraform-dev.tfvars" 
             }
         }
-        
-        stage('Plan Terraform') {
+        stage ('Terraform Apply & Deploy Docker Image on Webserver'){
             steps {
-                sh 'terraform plan -var "aws_access_key=${env.AWS_ACCESS_KEY}" -var "aws_secret_key=${env.AWS_SECRET_KEY}"' 
-            }
-        }
-        
-        stage('Apply Terraform') {
-            steps {
-                sh 'terraform apply -var "aws_access_key=${env.AWS_ACCESS_KEY}" -var "aws_secret_key=${env.AWS_SECRET_KEY}"'
+                sh "export TF_VAR_region='${env.aws_region}' && export TF_VAR_access_key='${env.access_key}' && export TF_VAR_secret_key='${env.secret_key}' && terraform apply -var-file terraform-dev.tfvars -auto-approve"
             }
         }
     }
